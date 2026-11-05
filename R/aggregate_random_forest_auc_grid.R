@@ -1,0 +1,15 @@
+library(dplyr)
+library(fs)
+library(here)
+
+here::i_am("R/aggregate_random_forest_auc_grid.R")
+
+args <- commandArgs(trailingOnly = TRUE)
+in_dir <- if (length(args) >= 1) args[[1]] else path("replication_data", "rf_auc_grid")
+out_file <- if (length(args) >= 2) args[[2]] else path("replication_data", "aucs_rf.rds")
+shards <- dir_ls(in_dir, glob = "rf_auc_*.rds", type = "file")
+if (length(shards) != 120) stop("Expected 120 RF AUC shards; found ", length(shards), ".")
+result <- bind_rows(lapply(shards, readRDS)) %>% arrange(task_id)
+if (!setequal(result$task_id, seq_len(120))) stop("RF AUC shard task IDs are incomplete.")
+readr::write_rds(result, out_file)
+message("Wrote ", out_file)
